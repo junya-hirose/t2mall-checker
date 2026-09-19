@@ -1,0 +1,58 @@
+name: Takara Tomy Mall Watcher
+
+on:
+  schedule:
+    - cron: '1 15 * * *'
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: 'Save current products as baseline without sending mail'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: takaratomymall-watcher
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - run: npm ci
+
+      - name: Run watcher
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.baseline }}" = "true" ]; then
+            npm run baseline
+          else
+            npm run check
+          fi
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_SECURE: ${{ secrets.SMTP_SECURE }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          PAGE_TIMEOUT_MS: 20000
+          SKIP_SOURCE_IDS: ${{ vars.SKIP_SOURCE_IDS }}
+
+      - name: Commit state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/takaratomymall-state.json
+          git diff --cached --quiet || git commit -m "Update Takara Tomy Mall watcher state"
+          git push

@@ -1,0 +1,11 @@
+node_modules/
+tmp-takaratomymall-state.json
+
+# Legacy/local investigation files from the old GAS project.
+dmp-scraper*.txt
+dmp-scraper*.gs
+dmp-scraper*.bak*
+takaratomymall-watcher.gs
+README-takaratomymall-watcher.md
+tmp_*
+__dmp.html

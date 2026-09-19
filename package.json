@@ -1,0 +1,14 @@
+{
+  "name": "takaratomymall-watcher",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node src/takaratomymall-watcher.mjs",
+    "baseline": "node src/takaratomymall-watcher.mjs --baseline",
+    "dry-run": "node src/takaratomymall-watcher.mjs --dry-run"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  }
+}

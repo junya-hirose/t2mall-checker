@@ -47,7 +47,7 @@ jobs:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
-          PAGE_TIMEOUT_MS: 20000
+          PAGE_TIMEOUT_MS: 60000
           SKIP_SOURCE_IDS: ${{ vars.SKIP_SOURCE_IDS }}
 
       - name: Commit state

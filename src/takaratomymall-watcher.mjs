@@ -44,9 +44,10 @@ const sources = [
 
 async function main() {
   const previousState = await loadState();
-  const nextState = {};
+  const nextState = { ...previousState };
   const alerts = [];
   const errors = [];
+  const successfulSources = new Set();
 
   for (const source of enabledSources()) {
     try {
@@ -55,6 +56,11 @@ async function main() {
 
       if (products.length === 0) {
         throw new Error('商品を解析できませんでした');
+      }
+
+      successfulSources.add(source.id);
+      for (const key of Object.keys(nextState)) {
+        if (key.startsWith(`${source.id}::`)) delete nextState[key];
       }
 
       for (const product of products) {
@@ -87,6 +93,18 @@ async function main() {
     }
   }
 
+  if (successfulSources.size === 0) {
+    const body = buildErrorEmailBody('すべての取得元で取得に失敗しました。state は更新していません。', errors);
+    console.log(body);
+
+    if (!args.has('--dry-run') && !args.has('--baseline')) {
+      await sendMail(`タカラトミーモール監視 エラー ${formatJst(new Date())}`, body);
+    }
+
+    process.exitCode = 1;
+    return;
+  }
+
   await saveState(nextState);
 
   if (args.has('--baseline')) {
@@ -97,7 +115,14 @@ async function main() {
 
   if (alerts.length === 0) {
     console.log('No Takara Tomy Mall updates.');
-    if (errors.length > 0) console.log(errors.join('\n'));
+    if (errors.length > 0) {
+      const body = buildErrorEmailBody('一部の取得元で取得エラーがありました。検出された更新はありません。', errors);
+      console.log(body);
+
+      if (!args.has('--dry-run')) {
+        await sendMail(`タカラトミーモール監視 エラー ${formatJst(new Date())}`, body);
+      }
+    }
     return;
   }
 
@@ -112,7 +137,7 @@ async function main() {
 async function fetchHtml(source) {
   const startedAt = Date.now();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), Number(process.env.PAGE_TIMEOUT_MS || 20000));
+  const timer = setTimeout(() => controller.abort(), Number(process.env.PAGE_TIMEOUT_MS || 60000));
 
   try {
     console.log(`Fetching ${source.label}: ${source.url}`);
@@ -268,6 +293,17 @@ function buildEmailBody(alerts, errors) {
       lines.push(product.url);
       lines.push('');
     });
+
+  if (errors.length > 0) {
+    lines.push('取得エラー:');
+    errors.forEach((error) => lines.push(`- ${error}`));
+  }
+
+  return lines.join('\n');
+}
+
+function buildErrorEmailBody(message, errors) {
+  const lines = [message, ''];
 
   if (errors.length > 0) {
     lines.push('取得エラー:');
